@@ -4,6 +4,8 @@
 
 [![NPM](https://img.shields.io/npm/v/firestore-cms-iframe.svg)](https://www.npmjs.com/package/firestore-cms-iframe) [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 
+This is to be used to listen to a parent iframe, then trigger editable components and return them to the parent to be saved.
+
 ## Install
 
 ```bash
@@ -15,12 +17,14 @@ npm install --save firestore-cms-iframe
 ```jsx
 import React, { Component } from 'react'
 
-import MyComponent from 'firestore-cms-iframe'
-import 'firestore-cms-iframe/dist/index.css'
+import CMS from 'firestore-cms-iframe'
 
+// Add to your App.js.
 class Example extends Component {
   render() {
-    return <MyComponent />
+    return <MyWebsite>
+      <CMS />
+    </ MyWebsite>
   }
 }
 ```
