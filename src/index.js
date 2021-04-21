@@ -1,4 +1,7 @@
+// This has been moved to npm package firestore-cms-iframe.
+
 import React, {useEffect, useState, ReactDOM} from 'react';
+import {useLocation} from 'react-router-dom';
 // This is shared code for all CMS listeners.
 // Listens to events from login.<domain-name>.craftie.xyz, 
 // Edits the page after events are received.
@@ -18,6 +21,7 @@ Quill.prototype.setHTML = (html) => {
 const quills = {};
 
 export default function CMS(){
+    let location = useLocation();
 
     const [editing, setEditing] = useState(/*TODO make this false */true);
     // const [showEditor, setShowingEditor] = useState();
@@ -31,10 +35,6 @@ export default function CMS(){
         // TODO remove this, this is only to be prompted by the parent from Craftie.xyz.
         // highlightEditable({origin: allowedOrigin, data: "startEdit"});
 
-        setInterval(() => {
-            addEditButton();
-        }, 1500);
-
     }, []);
 
     // useEffect(()=>{
@@ -46,7 +46,12 @@ export default function CMS(){
         // console.log('Received event Evt.data: ', evt.data);
         // 'highlight'
         if(!evt.origin.includes("login.bush_and_beyond")) return;
-
+        if(evt.data.actionType === "initEditing"){
+            console.log('initEditing!!!');
+            setInterval(() => {
+                addEditButton();
+            }, 1500);
+        }
         if(evt.data.actionType === 'startEdit'){
             highlightEditable();
             // console.log("evt.data: ", evt.data);
@@ -55,6 +60,14 @@ export default function CMS(){
             // console.log('Editing not allowed: ', evt.origin);
         }
     }
+
+    // useEffect(()=>{
+    //     // console.log('location changed: ', location, editing);
+    //     // console.log('Editing: ', editing);
+    //     if(editing){
+    //         addEditButton();
+    //     }
+    // }, [location]);
 
     useEffect(() => {
         var head = document.head;
@@ -191,23 +204,22 @@ export default function CMS(){
 
 
     const toolbarOptions = [
+        [{ 'header': [2, false] }],
+        // [{ 'size': ['small', false, 'large', 'huge'] }],  // custom dropdown
         ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
-        ['blockquote', 'code-block'],
+        ['blockquote'/*, 'code-block'*/],
       
-        [{ 'header': 1 }, { 'header': 2 }],               // custom button values
+        // [{ 'header': 1 }, { 'header': 2 }],               // custom button values
         [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-        [{ 'script': 'sub'}, { 'script': 'super' }],      // superscript/subscript
+        // [{ 'script': 'sub'}, { 'script': 'super' }],      // superscript/subscript
         // [{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
         // [{ 'direction': 'rtl' }],                         // text direction
       
-        [{ 'size': ['small', false, 'large', 'huge'] }],  // custom dropdown
-        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      
-        [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
-        [{ 'font': [] }],
+        // [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
+        // [{ 'font': [] }],
         [{ 'align': [] }],
       
-        ['clean']                                         // remove formatting button
+        // ['clean']                                         // remove formatting button
     ];
 
     const createEditInput = (e) => {
@@ -230,10 +242,12 @@ export default function CMS(){
         
         // var inp = document.createElement("input");
         if(!parentElement.querySelector('.ql-toolbar')){
-            
+            // Kills onclick() events, so has to be placed first.
+            parentElement.innerHTML = parentElement.innerHTML.replace(firstText, '');
             var quill = new Quill(parentElement.querySelector('.editor-wrapper'), { //getCssSelector(parentElement)
                 modules: { toolbar: toolbarOptions },
-                theme: 'snow'
+                theme: 'snow',
+                formats: ['bold','header','italic','blockquote','indent','link','strike','script','underline','list','direction','align','image','video'],
             });
             // var currentText = parentElement.innerHTML;//.replace(/EditSaveCancel$/,'');
             // console.log('currentText: ', currentText);
@@ -246,12 +260,12 @@ export default function CMS(){
             // quill.setText(currentText);
             // quill.setHTML(currentText);
             // parentElement.innerHTML = parentElement.innerHTML.replace(regexp, '');
-            parentElement.innerHTML = parentElement.innerHTML.replace(firstText, '');
             quill.setHTML(firstText);
             // parentElement.innerHTML = secondText;
 
             quills[getCssSelector(parentElement)] = quill;
         } else {
+            console.log('Editor already exists!!!')
             // Editor already exists, just show it
             parentElement.querySelector('.ql-toolbar').style.display = "block";
             parentElement.querySelector('.ql-container').style.display = "block";
@@ -354,9 +368,20 @@ export default function CMS(){
                 .cp-editable.editing .cp-editable-cancel-btn {
                     display: block;
                 }
+
+                .ql-toolbar, 
+                .editor-wrapper,
+                .ql-editor,
+                .ql-editor * {
+                    background-color: white!important;
+                    color: black!important;
+                }
+
             </style>
         `)
     }
 
-    return "";
+    return <>
+    </>;
 }
+//.ql-editor *
