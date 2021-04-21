@@ -1,6 +1,6 @@
 {
   "name": "firestore-cms-iframe",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Content Management System for  an authenticated Firestore user who modifies their website from an external iframe ",
   "author": "gieoon",
   "license": "MIT",
