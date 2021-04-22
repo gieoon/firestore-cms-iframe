@@ -1,7 +1,6 @@
 // This has been moved to npm package firestore-cms-iframe.
 
-import React, {useEffect, useState, ReactDOM} from 'react';
-import {useLocation} from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
 // This is shared code for all CMS listeners.
 // Listens to events from login.<domain-name>.craftie.xyz, 
 // Edits the page after events are received.
@@ -21,7 +20,6 @@ Quill.prototype.setHTML = (html) => {
 const quills = {};
 
 export default function CMS(){
-    let location = useLocation();
 
     const [editing, setEditing] = useState(/*TODO make this false */true);
     // const [showEditor, setShowingEditor] = useState();
@@ -31,7 +29,6 @@ export default function CMS(){
         // Listen to CMS websitecontent editing events.
         window.addEventListener("message", receivedMessage, false);
 
-        // console.log('HIGHLIGHTING');
         // TODO remove this, this is only to be prompted by the parent from Craftie.xyz.
         // highlightEditable({origin: allowedOrigin, data: "startEdit"});
 
@@ -47,7 +44,6 @@ export default function CMS(){
         // 'highlight'
         if(!evt.origin.includes("login.bush_and_beyond")) return;
         if(evt.data.actionType === "initEditing"){
-            console.log('initEditing!!!');
             setInterval(() => {
                 addEditButton();
             }, 1500);
@@ -60,14 +56,6 @@ export default function CMS(){
             // console.log('Editing not allowed: ', evt.origin);
         }
     }
-
-    // useEffect(()=>{
-    //     // console.log('location changed: ', location, editing);
-    //     // console.log('Editing: ', editing);
-    //     if(editing){
-    //         addEditButton();
-    //     }
-    // }, [location]);
 
     useEffect(() => {
         var head = document.head;
@@ -98,7 +86,7 @@ export default function CMS(){
             // console.log('el.querySelector(.cp-editable-btn): ', el.querySelector('.cp-editable-btn') === undefined);
 
             if(!el.querySelector('.cp-editable-btn')){
-                console.log('Adding button');
+                // console.log('Adding button');
                 const dw = document.createElement('div');
                 dw.classList.add("cp-editable-btn-wrapper");
                 // console.log('Adding edit button to element: #', el, el.querySelector('.cp-editable-btn'));
@@ -169,21 +157,21 @@ export default function CMS(){
         // Update local DOM
         // var quill = quills[getCssSelector(parentElement)];
         var currentText = quills[getCssSelector(parentElement)].getHTML();//document.querySelector('.ql-editor').textContent;//Not working => quill.getText();
-        console.log('got text: ', currentText)
+        // console.log('got text: ', currentText)
 
         // parentElement.textContent = currentText;
         parentElement.innerHTML = currentText;
-        console.log(currentData);
+        // console.log(currentData);
         const dbObj = currentData;
-        console.log("Loaded dbObj: ", dbObj);
+        // console.log("Loaded dbObj: ", dbObj);
         var sections = parentElement.id.split(/-|~/g);
         // sections.unshift("obj");
-        console.log("el.id: ", parentElement.id);
-        console.log("sections: ", sections);
+        // console.log("el.id: ", parentElement.id);
+        // console.log("sections: ", sections);
         var val = extractElementContent(parentElement);
         
         // console.log(JSON.stringify(newObj));
-        console.log("Sending: ", sections, val);
+        // console.log("Sending: ", sections, val);
 
         window.parent.postMessage({
             actionType: 'finishedEdit',
@@ -195,7 +183,7 @@ export default function CMS(){
     }
 
     const extractElementContent = (el) => {
-        console.log('Extracting text from: ', el, el.innerHTML);
+        // console.log('Extracting text from: ', el, el.innerHTML);
         // var matchIndex = el.innerHTML.indexOf('<div class="editor-wrapper"');
         // var firstText = el.innerHTML;//.substring(0, matchIndex);
         // console.log('firstText: ', firstText);
@@ -265,7 +253,7 @@ export default function CMS(){
 
             quills[getCssSelector(parentElement)] = quill;
         } else {
-            console.log('Editor already exists!!!')
+            // console.log('Editor already exists!!!')
             // Editor already exists, just show it
             parentElement.querySelector('.ql-toolbar').style.display = "block";
             parentElement.querySelector('.ql-container').style.display = "block";
@@ -381,7 +369,6 @@ export default function CMS(){
         `)
     }
 
-    return <>
-    </>;
+    return "";
 }
 //.ql-editor *

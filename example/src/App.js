@@ -1,10 +1,9 @@
 import React from 'react'
 
-import { ExampleComponent } from 'firestore-cms-iframe'
-import 'firestore-cms-iframe/dist/index.css'
+import CMS from 'firestore-cms-iframe'
 
 const App = () => {
-  return <ExampleComponent text="Create React Library Example 😄" />
+  return <CMS />
 }
 
 export default App
