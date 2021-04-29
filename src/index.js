@@ -1,6 +1,6 @@
 // This has been moved to npm package firestore-cms-iframe.
 
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, ReactDOM} from 'react';
 // This is shared code for all CMS listeners.
 // Listens to events from login.<domain-name>.craftie.xyz, 
 // Edits the page after events are received.
@@ -8,6 +8,7 @@ import Quill from 'quill';
 // import ReactQuill from 'react-quill';
 // import 'react-quill/dist/quill.snow.css';
 import getCssSelector from 'css-selector-generator';
+
 
 Quill.prototype.getHTML = () => {
     return document.querySelector('.ql-editor').innerHTML;
@@ -19,11 +20,14 @@ Quill.prototype.setHTML = (html) => {
 
 const quills = {};
 
-export default function CMS(){
+export default function CMS({
+    allowedOrigin
+}){
 
     const [editing, setEditing] = useState(/*TODO make this false */true);
     // const [showEditor, setShowingEditor] = useState();
     const [currentData, setCurrentData] = useState();
+    const [currentImageId, setCurrentImageId] = useState();
     
     useEffect(()=>{
         // Listen to CMS websitecontent editing events.
@@ -32,29 +36,36 @@ export default function CMS(){
         // TODO remove this, this is only to be prompted by the parent from Craftie.xyz.
         // highlightEditable({origin: allowedOrigin, data: "startEdit"});
 
-    }, []);
+        
 
-    // useEffect(()=>{
-    //     console.log('currentData: ', currentData);
-    // }, [currentData]);
+    }, []);
 
     // Handles received messages from parent.
     const receivedMessage = (evt) => {
-        // console.log('Received event Evt.data: ', evt.data);
         // 'highlight'
-        if(!evt.origin.includes("login.bush_and_beyond")) return;
+        if(!evt.origin.includes(allowedOrigin)) return;
         if(evt.data.actionType === "initEditing"){
             setInterval(() => {
                 addEditButton();
             }, 1500);
         }
-        if(evt.data.actionType === 'startEdit'){
+        else if(evt.data.actionType === 'startEdit'){
             highlightEditable();
-            // console.log("evt.data: ", evt.data);
             setCurrentData(evt.data.websiteContent);
-        } else {
-            // console.log('Editing not allowed: ', evt.origin);
         }
+        else if(evt.data.actionType === 'updateElement'){
+            // document.getElementById(currentFileId).classList.toggle('editing');
+            document.getElementById(evt.data.identifier).src = evt.data.file.url;
+        }
+        else if(evt.data.actionType === 'updateArray'){
+            console.log('RECEIVED UPDATING ARRAY: ', evt.data);
+            setCurrentData(evt.data.newWebsiteContent);
+            window.location.reload();
+        }
+        
+        // else if(evt.data.actionType === 'cancelSaveFile'){
+        //     document.getElementById(currentFileId).classList.toggle('editing');
+        // }
     }
 
     useEffect(() => {
@@ -70,26 +81,16 @@ export default function CMS(){
         return () => { head.removeChild(link); }
     }, []);
 
-    // useEffect(()=>{
-    //     console.log('Adding');
-    //     if(editing){
-    //         addEditButton();
-    //     }
-    // });
-
     const addEditButton = () => {
+        // Text
         const elements = Array.from(
             document.querySelectorAll('.cp-editable')
         );
-        // console.log("editable elements: ", elements[2]);
         for(var el of elements){
-            // console.log('el.querySelector(.cp-editable-btn): ', el.querySelector('.cp-editable-btn') === undefined);
 
             if(!el.querySelector('.cp-editable-btn')){
-                // console.log('Adding button');
                 const dw = document.createElement('div');
                 dw.classList.add("cp-editable-btn-wrapper");
-                // console.log('Adding edit button to element: #', el, el.querySelector('.cp-editable-btn'));
                 const d = document.createElement('div');
                 const editorContainer = document.createElement('div');
                 d.textContent = "Edit";
@@ -126,13 +127,134 @@ export default function CMS(){
             }
 
         }
+
+        // Images
+        const imgElements = Array.from(
+            document.querySelectorAll('.cp-editable-img')
+        );
+        for(var el of imgElements){
+            if(!el.parentElement.querySelector('.cp-editable-img-btn')){
+                el.parentElement.style.position = "relative";
+                const dw = document.createElement('div');
+                dw.classList.add("cp-editable-img-wrapper");
+                const d = document.createElement('div');
+                d.textContent = "Change Image";
+
+                d.classList.add('cp-editable-img-btn');
+                
+                // const d2 = document.createElement('div');
+                // d2.textContent = "Save";
+                // d2.classList.add('cp-editable-img-save-btn');
+                
+                // const d3 = document.createElement('div');
+                // d3.textContent = "Cancel";
+                // d3.classList.add('cp-editable-img-cancel-btn');
+
+                // d2.onclick = (e) => {
+                //     saveImageClicked(e);
+                // }
+                // d3.onclick = (e) => {
+                //     cancelImageClicked(e);
+                // }
+                d.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    createImageUpload(e);
+                }
+                dw.appendChild(d);
+                // dw.appendChild(d2);
+                // dw.appendChild(d3);
+                el.parentElement.insertBefore(dw, el.nextSibling);
+            }
+        }
+
+        // Lists
+        const arrayElements = Array.from(
+            document.querySelectorAll('.cp-editable-array')
+        );
+        for(var el of arrayElements){
+            if(!el.querySelector('.cp-editable-array-plus')){
+                // Put remove button on direct child div.
+                var childrenElements = Array.from(
+                    el.querySelectorAll(':scope > div')
+                );
+
+                for(var i=0;i<childrenElements.length;i++){
+                    const dm = document.createElement('div');
+                    dm.classList.add('cp-editable-array-minus-wrapper');
+                    const minus = document.createElement('div');
+                    minus.textContent = "-";
+                    minus.classList.add('cp-editable-array-minus');
+                    minus.id = i;
+                    dm.style.position = "relative";
+                    dm.appendChild(minus);
+                    childrenElements[i].appendChild(dm);
+
+                    minus.onclick = (e) => {
+                        var parentElement = e.target.closest('.cp-editable-array');//e.target.parentElement.parentElement;
+                        window.parent.postMessage({
+                            actionType: 'removeFromArray',
+                            sections: getSections(parentElement.id),
+                            identifier: parentElement.id,
+                            index: e.target.id,
+                        }, '*');
+                    }
+                }
+                el.style.position = "relative";
+                // Search only for direct children with :scope pseudo-class.
+                const dw = document.createElement('div');
+                dw.classList.add("cp-editable-array-plus-wrapper");
+                const plus = document.createElement('div');
+                plus.textContent = "+";
+                plus.classList.add('cp-editable-array-plus');
+
+                dw.appendChild(plus);   
+                el.appendChild(dw);
+
+                plus.onclick = (e) => {
+                    var parentElement = e.target.parentElement.parentElement;
+                    var obj = constructArrayObj(parentElement);
+                    window.parent.postMessage({
+                        actionType: 'addToArray',
+                        sections: getSections(parentElement.id),
+                        identifier: parentElement.id,
+                        obj: obj,
+                    }, '*');
+                }
+            }
+        }
+    }
+
+    // Provided with an element, construct an element by detecting all children types and creating them.
+    // These are found by looking for id's of the form 'asd-0-etc'
+    const constructArrayObj = (parentElement) => {
+        const singleInstance = [];
+        // console.log(parentElement)
+        // Find all elements with an 'id' attribute
+        // Assume that direct child is the right type.
+        console.log("parentelements: ", parentElement);
+        for(var el of Array.from(parentElement.firstChild.querySelectorAll("[id]"))){
+            if(!el.classList.contains("cp-editable-array-minus")){
+                var m = el.id.match(/[a-zA-Z0-9]+$/);
+                console.log(m, m[0]);
+                singleInstance.push({
+                    type: el.tagName.toLowerCase(),
+                    value: m[0],
+                });
+            }
+        }
+        // console.log(singleInstance);
+        return singleInstance;
+        // for(var t of [".cp-editable",".cp-editable-img",".cp-editable-array"]){
+        //     for(var element of Array.from(parentElement.querySelectorAll(t))){
+
+        //     }
+        // }
     }
 
     const cancelClicked = (e) => {
         var parentElement = e.target.closest('.cp-editable');
         parentElement.classList.toggle('editing');
-        // console.log('Cancel pressed')
-        // console.log(quills[getCssSelector(parentElement)].getText());
         // quills[getCssSelector(parentElement)].setText("");
         // Manually hide
         parentElement.querySelector('.ql-toolbar').style.display = "none";
@@ -142,7 +264,6 @@ export default function CMS(){
         // delete quills[getCssSelector(parentElement)];
         // parentElement.textContent = quills[getCssSelector(parentElement)].getText();
         parentElement.innerHTML = quills[getCssSelector(parentElement)].getHTML();// + parentElement.innerHTML;
-        // console.log("parentElement.textContent: ", parentElement.textContent);
         
         // // Redefine click events for buttons.
         // Recreates everything.
@@ -157,21 +278,13 @@ export default function CMS(){
         // Update local DOM
         // var quill = quills[getCssSelector(parentElement)];
         var currentText = quills[getCssSelector(parentElement)].getHTML();//document.querySelector('.ql-editor').textContent;//Not working => quill.getText();
-        // console.log('got text: ', currentText)
 
         // parentElement.textContent = currentText;
         parentElement.innerHTML = currentText;
-        // console.log(currentData);
         const dbObj = currentData;
-        // console.log("Loaded dbObj: ", dbObj);
         var sections = parentElement.id.split(/-|~/g);
         // sections.unshift("obj");
-        // console.log("el.id: ", parentElement.id);
-        // console.log("sections: ", sections);
         var val = extractElementContent(parentElement);
-        
-        // console.log(JSON.stringify(newObj));
-        // console.log("Sending: ", sections, val);
 
         window.parent.postMessage({
             actionType: 'finishedEdit',
@@ -182,11 +295,47 @@ export default function CMS(){
         addEditButton();
     }
 
+    // const saveImageClicked = () => {
+    //     // var parentElement = e.target.parentElement.previousElementSibling;
+    //     // parentElement.classList.toggle('editing');
+    //     document.getElementById(currentImageId).classList.toggle('editing');
+    //     // Update local DOM
+    //     var sections = currentImageId.split(/-|~/g);
+
+    //     console.log('SENDING Save Image: ', sections, currentFile);
+    //     window.parent.postMessage({
+    //         actionType: 'editFile',
+    //         sections: sections,
+    //         file: currentFile,
+    //         identifier: currentImageId,
+    //     }, '*');
+
+    //     addEditButton();
+    // }
+
+    const getSections = (s) => {
+        var a = s.split(/-|~/g);
+        return a;
+    }
+
+    const createImageUpload = (e) => {
+        var el = e.target;
+        var parentElement = el.parentElement.previousElementSibling;//closest('.cp-editable-img');
+        console.log("variables: ", el, parentElement, parentElement.id);
+        parentElement.classList.toggle('editing');
+        // setCurrentFile(imageId);
+        setCurrentImageId(parentElement.id);
+        // setShowingImageUploader(true);
+        window.parent.postMessage({
+            actionType: 'editFile',
+            sections: getSections(parentElement.id),
+            identifier: parentElement.id,
+        }, '*');
+    }
+
     const extractElementContent = (el) => {
-        // console.log('Extracting text from: ', el, el.innerHTML);
         // var matchIndex = el.innerHTML.indexOf('<div class="editor-wrapper"');
         // var firstText = el.innerHTML;//.substring(0, matchIndex);
-        // console.log('firstText: ', firstText);
         return el.innerHTML;//firstText;//el.textContent.replace(/EditSaveCancel/,'');
     }
 
@@ -195,7 +344,7 @@ export default function CMS(){
         [{ 'header': [2, false] }],
         // [{ 'size': ['small', false, 'large', 'huge'] }],  // custom dropdown
         ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
-        ['blockquote'/*, 'code-block'*/],
+        ['blockquote', /*'code-block'*/'link'],
       
         // [{ 'header': 1 }, { 'header': 2 }],               // custom button values
         [{ 'list': 'ordered'}, { 'list': 'bullet' }],
@@ -211,23 +360,18 @@ export default function CMS(){
     ];
 
     const createEditInput = (e) => {
-        // console.log('Creating edit input');
         var el = e.target;
         var parentElement = el.closest('.cp-editable');
         parentElement.classList.toggle('editing');
-        // console.log('parentElement: ', parentElement.innerHTML);
+        
         // // var m = parentElement.innerHTML.match(/^[^<]*/);
         // var m = parentElement.innerHTML.match(/.+?(?=<div class="editor")/s);
-        // console.log(m);
         // var currentText = m[0].trim();
         // var regexp = new RegExp(m[0]);
         var matchIndex = parentElement.innerHTML.indexOf('<div class="editor-wrapper"');
         var firstText = parentElement.innerHTML.substring(0, matchIndex);
         // var secondText = parentElement.innerHTML.substring(matchIndex);
 
-        // console.log("first text: ", firstText);
-        // console.log("second text: ", secondText);
-        
         // var inp = document.createElement("input");
         if(!parentElement.querySelector('.ql-toolbar')){
             // Kills onclick() events, so has to be placed first.
@@ -238,12 +382,8 @@ export default function CMS(){
                 formats: ['bold','header','italic','blockquote','indent','link','strike','script','underline','list','direction','align','image','video'],
             });
             // var currentText = parentElement.innerHTML;//.replace(/EditSaveCancel$/,'');
-            // console.log('currentText: ', currentText);
              // Match until the first <, which denotes HTML postfixes.
-            // console.log("m[0]: ", m[0]);
             // currentText = m[0].trim();
-            // console.log('inner html: ', parentElement.innerHTML);
-            // console.log("replaced: ", parentElement.innerHTML.replace(regexp, ''));
             
             // quill.setText(currentText);
             // quill.setHTML(currentText);
@@ -253,7 +393,6 @@ export default function CMS(){
 
             quills[getCssSelector(parentElement)] = quill;
         } else {
-            // console.log('Editor already exists!!!')
             // Editor already exists, just show it
             parentElement.querySelector('.ql-toolbar').style.display = "block";
             parentElement.querySelector('.ql-container').style.display = "block";
@@ -283,7 +422,6 @@ export default function CMS(){
 
         // parentElement.appendChild(toolbar);
         // parentElement.appendChild(editor);
-        // console.log(quills);
     }
 
 
@@ -342,18 +480,26 @@ export default function CMS(){
                 }
                 .cp-editable-btn:hover,
                 .cp-editable-save-btn:hover,
-                .cp-editable-cancel-btn:hover {
+                .cp-editable-cancel-btn:hover,
+                .cp-editable-img-cancel-btn:hover,
+                .cp-editable-img-save-btn:hover,
+                .cp-editable-img-btn:hover {
                     background-color: rgb(50,50,50);
                 }
-                .cp-editable.editing .cp-editable-btn {
+                .cp-editable.editing .cp-editable-btn,
+                .cp-editable-img.editing .cp-editable-img-btn {
                     display: none;
                 }
                 .cp-editable .cp-editable-save-btn,
-                .cp-editable .cp-editable-cancel-btn {
+                .cp-editable .cp-editable-cancel-btn,
+                .cp-editable-img .cp-editable-img-cancel-btn,
+                .cp-editable-img .cp-editable-img-save-btn {
                     display: none;
                 }
                 .cp-editable.editing .cp-editable-save-btn,
-                .cp-editable.editing .cp-editable-cancel-btn {
+                .cp-editable.editing .cp-editable-cancel-btn,
+                .cp-editable-img-btn.editing .cp-editable-img-cancel-btn,
+                .cp-editable-img-btn.editing .cp-editable-img-save-btn {
                     display: block;
                 }
 
@@ -363,12 +509,85 @@ export default function CMS(){
                 .ql-editor * {
                     background-color: white!important;
                     color: black!important;
+                    line-height: normal!important;
+                    text-align: initial!important;
                 }
 
+                .cp-editable-img-btn {
+                    position: relative;
+                    border: 2px solid black;
+                    background-color: black;
+                    color: white;
+                    white-space: nowrap;
+                    padding: 2px 4px;
+                    width: fit-content;
+                    font-size: 12px;
+                    border-radius: 4px;
+                    border: 1px solid rgba(150,150,150,0.5);
+                    cursor: pointer;
+                    line-height: normal;
+                    font-weight: 200;
+                    margin-left: 5px;
+                }
+                .cp-editable-img-wrapper {
+                    position: absolute;
+                    z-index: 1;
+                    right: 0;
+                    bottom: 5px;
+                    display: flex;
+                    justify-content: space-evenly;
+                    align-items: center;
+                    transition: all 100ms ease-in-out;
+                }
+
+                .cp-editable-array-minus-wrapper {
+                    position: relative;
+                }
+                .cp-editable-array-minus {
+                    position: absolute;
+                    bottom: 5px;
+                    right: 5px;
+                    /*top: 50%;*/
+                    /*transform: translateY(-50%);*/
+                    border: 1px solid rgba(150,150,150,0.5);
+                    border-radius: 4px;
+                    font-size: 20px;
+                    background-color: black;
+                    font-weight: 800;
+                    line-height: 20px;
+                    padding: 5px 10px;
+                    color: white;
+                    cursor: pointer;
+                }
+                .cp-editable-array-plus-wrapper {
+                    position: absolute;
+                    right: 10px;
+                    bottom: 0px;
+                }
+                .cp-editable-array-plus {
+                    position: absolute;
+                    bottom: -35px;
+                    right: 0px;
+                    background-color: black;
+                    border: 1px solid rgba(150,150,150,0.5);
+                    border-radius: 4px;
+                    font-size: 25px;
+                    color: white;
+                    font-weight: 800;
+                    line-height: 20px;
+                    padding: 5px 10px;
+                    cursor: pointer;
+
+                }
+                .cp-editable-array-plus:hover ,
+                .cp-editable-array-minus:hover {
+                    opacity: .75;
+                }
             </style>
         `)
     }
 
     return "";
 }
-//.ql-editor *
+
+
