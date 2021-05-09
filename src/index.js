@@ -1,7 +1,6 @@
 // This has been moved to npm package firestore-cms-iframe.
 
 import React, {useEffect, useState, ReactDOM} from 'react';
-import {useLocation} from 'react-router-dom';
 // This is shared code for all CMS listeners.
 // Listens to events from login.<domain-name>.craftie.xyz, 
 // Edits the page after events are received.
@@ -25,7 +24,6 @@ export default function CMS({
     allowedOrigin,
     templates,
 }){
-    let location = useLocation();
 
     const [editing, setEditing] = useState(/*TODO make this false */true);
     // const [showEditor, setShowingEditor] = useState();
@@ -274,7 +272,7 @@ export default function CMS({
         // } else {
             // None exists, use template information
             console.log('USING TEMPLATE] ', parentElement.closest('.cp-editable-array').id);
-            var m = parentElement.closest('.cp-editable-array').id.match(/[a-zA-Z0-9]+$/);
+            var m = parentElement.closest('.cp-editable-array').id.match(/[a-zA-Z0-9_]+$/);
             return templates[m[0]];
         // }
         // console.log(singleInstance);
