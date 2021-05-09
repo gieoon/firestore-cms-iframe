@@ -1,6 +1,7 @@
 // This has been moved to npm package firestore-cms-iframe.
 
 import React, {useEffect, useState, ReactDOM} from 'react';
+import {useLocation} from 'react-router-dom';
 // This is shared code for all CMS listeners.
 // Listens to events from login.<domain-name>.craftie.xyz, 
 // Edits the page after events are received.
@@ -8,7 +9,7 @@ import Quill from 'quill';
 // import ReactQuill from 'react-quill';
 // import 'react-quill/dist/quill.snow.css';
 import getCssSelector from 'css-selector-generator';
-
+// import htmlToText from 'html-to-text';
 
 Quill.prototype.getHTML = () => {
     return document.querySelector('.ql-editor').innerHTML;
@@ -21,8 +22,10 @@ Quill.prototype.setHTML = (html) => {
 const quills = {};
 
 export default function CMS({
-    allowedOrigin
+    allowedOrigin,
+    templates,
 }){
+    let location = useLocation();
 
     const [editing, setEditing] = useState(/*TODO make this false */true);
     // const [showEditor, setShowingEditor] = useState();
@@ -35,9 +38,19 @@ export default function CMS({
 
         // TODO remove this, this is only to be prompted by the parent from Craftie.xyz.
         // highlightEditable({origin: allowedOrigin, data: "startEdit"});
-
-        
-
+        window.onclick = (e) => {
+            console.log("something was clicked: ", e.target);
+            var isEditingContainer = Boolean(e.target.closest(".cp-editable.editing"));
+            if(isEditingContainer){
+                console.log('BLOCKING');
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            // if(e.target.classList.contains('ql-editor')){
+            //     e.preventDefault();
+            //     e.stopPropagation();
+            // }
+        }
     }, []);
 
     // Handles received messages from parent.
@@ -173,17 +186,18 @@ export default function CMS({
             document.querySelectorAll('.cp-editable-array')
         );
         for(var el of arrayElements){
-            if(!el.querySelector('.cp-editable-array-plus')){
+            if(!el.querySelector('.cp-editable-array-minus-wrapper')){
+                
                 // Put remove button on direct child div.
                 var childrenElements = Array.from(
-                    el.querySelectorAll(':scope > div')
+                    el.querySelectorAll(':scope > *:not(.cp-editable-array-plus-wrapper)')
                 );
 
                 for(var i=0;i<childrenElements.length;i++){
                     const dm = document.createElement('div');
                     dm.classList.add('cp-editable-array-minus-wrapper');
                     const minus = document.createElement('div');
-                    minus.textContent = "-";
+                    minus.textContent = "X";// .innerHTML = "&#9587;";
                     minus.classList.add('cp-editable-array-minus');
                     minus.id = i;
                     dm.style.position = "relative";
@@ -201,6 +215,8 @@ export default function CMS({
                     }
                 }
                 el.style.position = "relative";
+            }
+            if(!el.querySelector('.cp-editable-array-plus')){
                 // Search only for direct children with :scope pseudo-class.
                 const dw = document.createElement('div');
                 dw.classList.add("cp-editable-array-plus-wrapper");
@@ -212,12 +228,14 @@ export default function CMS({
                 el.appendChild(dw);
 
                 plus.onclick = (e) => {
-                    var parentElement = e.target.parentElement.parentElement;
+                    // console.log("parentElement: ", e.target.closest('.cp-editable-array').querySelector('> *:not(.cp-editable-array-plus-wrapper)'));
+                    // Find first child that is not the plus div.
+                    var parentElement = e.target.parentElement;//e.target.closest('.cp-editable-array').querySelector('> *:not(.cp-editable-array-plus-wrapper)');//e.target.parentElement.parentElement;
                     var obj = constructArrayObj(parentElement);
                     window.parent.postMessage({
                         actionType: 'addToArray',
-                        sections: getSections(parentElement.id),
-                        identifier: parentElement.id,
+                        sections: getSections(parentElement.closest('.cp-editable-array').id),
+                        identifier: parentElement.closest('.cp-editable-array').id,
                         obj: obj,
                     }, '*');
                 }
@@ -232,17 +250,33 @@ export default function CMS({
         // console.log(parentElement)
         // Find all elements with an 'id' attribute
         // Assume that direct child is the right type.
-        console.log("parentelements: ", parentElement);
-        for(var el of Array.from(parentElement.firstChild.querySelectorAll("[id]"))){
-            if(!el.classList.contains("cp-editable-array-minus")){
-                var m = el.id.match(/[a-zA-Z0-9]+$/);
-                console.log(m, m[0]);
-                singleInstance.push({
-                    type: el.tagName.toLowerCase(),
-                    value: m[0],
-                });
-            }
-        }
+        // console.log("children: ", parentElement.closest('.cp-editable-array').querySelector(':scope > *'))
+        // var childElement = parentElement.closest('.cp-editable-array')
+            // .querySelector(':scope > *:not(.cp-editable-array-plus-wrapper)')
+            // .querySelector(':scope > .cp-editable')
+        // if(childElement){
+        //         //.querySelector(':scope > *:not(.cp-editable-array-plus-wrapper)')/*parentElement.firstChild*/);
+        //     for(var el of Array.from(childElement
+        //             // .closest('.cp-editable-array')
+        //             // .querySelector(':scope > *')
+        //             // .querySelector(':scope > *:not(.cp-editable-array-plus-wrapper)')
+        //             .querySelectorAll("[id]"))){
+        //                 console.log('Found element: ', el);
+        //         if(!el.classList.contains("cp-editable-array-minus")){
+        //             var m = el.id.match(/[a-zA-Z0-9]+$/);
+        //             console.log(m, m[0]);
+        //             singleInstance.push({
+        //                 type: el.tagName.toLowerCase(),
+        //                 value: m[0],
+        //             });
+        //         }
+        //     }
+        // } else {
+            // None exists, use template information
+            console.log('USING TEMPLATE] ', parentElement.closest('.cp-editable-array').id);
+            var m = parentElement.closest('.cp-editable-array').id.match(/[a-zA-Z0-9]+$/);
+            return templates[m[0]];
+        // }
         // console.log(singleInstance);
         return singleInstance;
         // for(var t of [".cp-editable",".cp-editable-img",".cp-editable-array"]){
@@ -253,6 +287,8 @@ export default function CMS({
     }
 
     const cancelClicked = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         var parentElement = e.target.closest('.cp-editable');
         parentElement.classList.toggle('editing');
         // quills[getCssSelector(parentElement)].setText("");
@@ -272,10 +308,14 @@ export default function CMS({
 
     // Save this field to the DB
     const saveClicked = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         var parentElement = e.target.closest('.cp-editable');
         parentElement.classList.toggle('editing');
         
         // Update local DOM
+        // Update local dom as pure text?
+        // htmlToText
         // var quill = quills[getCssSelector(parentElement)];
         var currentText = quills[getCssSelector(parentElement)].getHTML();//document.querySelector('.ql-editor').textContent;//Not working => quill.getText();
 
@@ -361,6 +401,8 @@ export default function CMS({
 
     const createEditInput = (e) => {
         var el = e.target;
+        e.preventDefault();
+        e.stopPropagation();
         var parentElement = el.closest('.cp-editable');
         parentElement.classList.toggle('editing');
         
@@ -371,6 +413,7 @@ export default function CMS({
         var matchIndex = parentElement.innerHTML.indexOf('<div class="editor-wrapper"');
         var firstText = parentElement.innerHTML.substring(0, matchIndex);
         // var secondText = parentElement.innerHTML.substring(matchIndex);
+        // console.log('firstText: ', firstText);
 
         // var inp = document.createElement("input");
         if(!parentElement.querySelector('.ql-toolbar')){
@@ -388,6 +431,7 @@ export default function CMS({
             // quill.setText(currentText);
             // quill.setHTML(currentText);
             // parentElement.innerHTML = parentElement.innerHTML.replace(regexp, '');
+
             quill.setHTML(firstText);
             // parentElement.innerHTML = secondText;
 
@@ -437,7 +481,10 @@ export default function CMS({
             <style>
                 .cp-editable {
                     border: 2px solid black;
-                    position: relative;
+                    position: relative;;
+                }
+                .cp-editable.editing {
+                    pointer-events: all!important
                 }
                 .cp-editable::after {
                     content: "";
@@ -457,7 +504,8 @@ export default function CMS({
                     /* box-shadow: 0px 0px 2px rgba(255,255,255,0.5); */
                     z-index: 1;
                     right: 0;
-                    bottom: -5px;
+                    pointer-events: all;
+                    top: 5px;
                     display: flex;
                     justify-content: space-evenly;
                     align-items: center;

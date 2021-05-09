@@ -13,7 +13,6 @@ npm install --save firestore-cms-iframe
 ```
 
 ## Live Demo
-This example doesn't work, but to remind me of that, here's the link.
 https://gieoon.github.io/firestore-cms-iframe/
 
 ## Usage
@@ -27,7 +26,7 @@ import CMS from 'firestore-cms-iframe'
 class Example extends Component {
   render() {
     return <MyWebsite>
-      <CMS />
+      <CMS allowedOrigin="<my-example-domain.com>" templates={{}} />
     </ MyWebsite>
   }
 }
