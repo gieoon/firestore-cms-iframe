@@ -37,10 +37,10 @@ export default function CMS({
         // TODO remove this, this is only to be prompted by the parent from Craftie.xyz.
         // highlightEditable({origin: allowedOrigin, data: "startEdit"});
         window.onclick = (e) => {
-            console.log("something was clicked: ", e.target);
+            // console.log("something was clicked: ", e.target);
             var isEditingContainer = Boolean(e.target.closest(".cp-editable.editing"));
             if(isEditingContainer){
-                console.log('BLOCKING');
+                // console.log('BLOCKING');
                 e.preventDefault();
                 e.stopPropagation();
             }
@@ -209,6 +209,7 @@ export default function CMS({
                             sections: getSections(parentElement.id),
                             identifier: parentElement.id,
                             index: e.target.id,
+                            // obj: constructArrayObj(e.target.parentElement)
                         }, '*');
                     }
                 }
@@ -287,6 +288,11 @@ export default function CMS({
     const cancelClicked = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        // Show all other "edit" buttons because prone to bugs when editing two at once.
+        Array.from(document.querySelectorAll('.cp-editable-btn')).forEach(el => {
+            el.style.display = "block";
+        });
+
         var parentElement = e.target.closest('.cp-editable');
         parentElement.classList.toggle('editing');
         // quills[getCssSelector(parentElement)].setText("");
@@ -308,6 +314,11 @@ export default function CMS({
     const saveClicked = async (e) => {
         e.preventDefault();
         e.stopPropagation();
+        // Show all other "edit" buttons because prone to bugs when editing two at once.
+        Array.from(document.querySelectorAll('.cp-editable-btn')).forEach(el => {
+            el.style.display = "block";
+        });
+
         var parentElement = e.target.closest('.cp-editable');
         parentElement.classList.toggle('editing');
         
@@ -403,6 +414,11 @@ export default function CMS({
         e.stopPropagation();
         var parentElement = el.closest('.cp-editable');
         parentElement.classList.toggle('editing');
+
+        // Hide all other "edit" buttons because prone to bugs when editing two at once.
+        Array.from(document.querySelectorAll('.cp-editable-btn')).forEach(el => {
+            el.style.display = "none";
+        });
         
         // // var m = parentElement.innerHTML.match(/^[^<]*/);
         // var m = parentElement.innerHTML.match(/.+?(?=<div class="editor")/s);
@@ -549,6 +565,10 @@ export default function CMS({
                     display: block;
                 }
 
+                .ql-editor {
+                    white-space: normal;
+                }
+
                 .ql-toolbar, 
                 .editor-wrapper,
                 .ql-editor,
@@ -557,6 +577,12 @@ export default function CMS({
                     color: black!important;
                     line-height: normal!important;
                     text-align: initial!important;
+                }
+
+                /* White space is weird in editor, so set to default */
+                .ql-editor p, 
+                .ql-editor h2 {
+                    margin: 1em 0!important;
                 }
 
                 .cp-editable-img-btn {
