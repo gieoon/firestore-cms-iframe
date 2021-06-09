@@ -1,6 +1,7 @@
 // This has been moved to npm package firestore-cms-iframe.
 
 import React, {useEffect, useState, ReactDOM} from 'react';
+import {useLocation} from 'react-router-dom';
 // This is shared code for all CMS listeners.
 // Listens to events from login.<domain-name>.craftie.xyz, 
 // Edits the page after events are received.
@@ -8,22 +9,25 @@ import Quill from 'quill';
 // import ReactQuill from 'react-quill';
 // import 'react-quill/dist/quill.snow.css';
 import getCssSelector from 'css-selector-generator';
+import { cms_templates } from './constants';
 // import htmlToText from 'html-to-text';
 
-Quill.prototype.getHTML = () => {
-    return document.querySelector('.ql-editor').innerHTML;
+Quill.prototype.getHTML = (parentElement) => {
+    return parentElement.querySelector('.ql-editor').innerHTML;
 };
 
-Quill.prototype.setHTML = (html) => {
-    document.querySelector('.ql-editor').innerHTML = html;
+Quill.prototype.setHTML = (parentElement, html) => {
+    parentElement.querySelector('.ql-editor').innerHTML = html;
 }
 
 const quills = {};
+// const original_innerHTMLs = {};
 
 export default function CMS({
-    allowedOrigin,
+    allowedOrigins,
     templates,
 }){
+    let location = useLocation();
 
     const [editing, setEditing] = useState(/*TODO make this false */true);
     // const [showEditor, setShowingEditor] = useState();
@@ -35,7 +39,7 @@ export default function CMS({
         window.addEventListener("message", receivedMessage, false);
 
         // TODO remove this, this is only to be prompted by the parent from Craftie.xyz.
-        // highlightEditable({origin: allowedOrigin, data: "startEdit"});
+        // highlightEditable({origin: allowedOrigins, data: "startEdit"});
         window.onclick = (e) => {
             // console.log("something was clicked: ", e.target);
             var isEditingContainer = Boolean(e.target.closest(".cp-editable.editing"));
@@ -54,11 +58,12 @@ export default function CMS({
     // Handles received messages from parent.
     const receivedMessage = (evt) => {
         // 'highlight'
-        if(!evt.origin.includes(allowedOrigin)) return;
+        if(!allowedOrigins.some(a => evt.origin.includes(a))) return;
+        // !evt.origin.includes(allowedOrigins)) return;
         if(evt.data.actionType === "initEditing"){
             setInterval(() => {
                 addEditButton();
-            }, 1500);
+            }, 1000);
         }
         else if(evt.data.actionType === 'startEdit'){
             highlightEditable();
@@ -69,7 +74,6 @@ export default function CMS({
             document.getElementById(evt.data.identifier).src = evt.data.file.url;
         }
         else if(evt.data.actionType === 'updateArray'){
-            console.log('RECEIVED UPDATING ARRAY: ', evt.data);
             setCurrentData(evt.data.newWebsiteContent);
             window.location.reload();
         }
@@ -97,7 +101,10 @@ export default function CMS({
         const elements = Array.from(
             document.querySelectorAll('.cp-editable')
         );
+
         for(var el of elements){
+            // Wrap in a div
+            // el.innerHTML = '<div>' + el.innerHTML + '</div>';
 
             if(!el.querySelector('.cp-editable-btn')){
                 const dw = document.createElement('div');
@@ -130,11 +137,22 @@ export default function CMS({
                 d.onclick = (e) => {
                     createEditInput(e);
                 }
-                el.appendChild(editorContainer);
+
+                const editablesWrapper = document.createElement('div');
+                editablesWrapper.classList.add('editables-wrapper');
+                // Block clicks to the parent element.
+                editablesWrapper.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                // el.appendChild(editorContainer);
                 dw.appendChild(d);
                 dw.appendChild(d2);
                 dw.appendChild(d3);
-                el.appendChild(dw);
+                // el.appendChild(dw);
+                editablesWrapper.appendChild(editorContainer);
+                editablesWrapper.appendChild(dw);
+                el.appendChild(editablesWrapper);
             }
 
         }
@@ -297,13 +315,23 @@ export default function CMS({
         parentElement.classList.toggle('editing');
         // quills[getCssSelector(parentElement)].setText("");
         // Manually hide
-        parentElement.querySelector('.ql-toolbar').style.display = "none";
-        parentElement.querySelector('.ql-container').style.display = "none";
-
+        if(parentElement.querySelector('.ql-toolbar'))
+            parentElement.querySelector('.ql-toolbar').style.display = "none";
+        if(parentElement.querySelector('.ql-container'))
+            parentElement.querySelector('.ql-container').style.display = "none";
+        // Array.from(parentElement.querySelectorAll('.ql-toolbar'))
+        //     .forEach(el => el.style.display = "none")
+        // Array.from(parentElement.querySelectorAll('.ql-container'))
+        //     .forEach(el => el.style.display = "none")
+        
         // quills[getCssSelector(parentElement)].disable();//enable(false);
         // delete quills[getCssSelector(parentElement)];
         // parentElement.textContent = quills[getCssSelector(parentElement)].getText();
-        parentElement.innerHTML = quills[getCssSelector(parentElement)].getHTML();// + parentElement.innerHTML;
+        // if (quills[getCssSelector(parentElement)]) {
+            // parentElement.innerHTML = quills[getCssSelector(parentElement)].getHTML();// + parentElement.innerHTML;
+            // parentElement.innerHTML = quills[parentElement.id].getHTML();
+        // }
+        // parentElement.innerHTML = original_innerHTMLs[parentElement.id];
         
         // // Redefine click events for buttons.
         // Recreates everything.
@@ -320,16 +348,33 @@ export default function CMS({
         });
 
         var parentElement = e.target.closest('.cp-editable');
+        var singleQuillId = parentElement.dataset.singleQuillId;
         parentElement.classList.toggle('editing');
+
+        // Manually hide
+        parentElement.querySelector('.ql-toolbar').style.display = "none";
+        parentElement.querySelector('.ql-container').style.display = "none";
+        // Array.from(parentElement.querySelectorAll('.ql-toolbar'))
+        //     .forEach(el => el.style.display = "none")
+        // Array.from(parentElement.querySelectorAll('.ql-container'))
+        //     .forEach(el => el.style.display = "none")
         
         // Update local DOM
         // Update local dom as pure text?
         // htmlToText
         // var quill = quills[getCssSelector(parentElement)];
-        var currentText = quills[getCssSelector(parentElement)].getHTML();//document.querySelector('.ql-editor').textContent;//Not working => quill.getText();
+        // var currentText = quills[getCssSelector(parentElement)].getHTML();//document.querySelector('.ql-editor').textContent;//Not working => quill.getText();
+        var newText;
+        if(singleQuillId){
+            newText = quills[singleQuillId].getHTML(parentElement);//document.querySelector('.ql-editor').textContent;//Not working => quill.getText();
+        } else {
+            newText = quills[parentElement.id].getHTML(parentElement);//document.querySelector('.ql-editor').textContent;//Not working => quill.getText();
+        }
 
         // parentElement.textContent = currentText;
-        parentElement.innerHTML = currentText;
+        // parentElement.innerHTML = currentText;
+        // parentElement.innerHTML = original_innerHTMLs[parentElement.id];
+
         const dbObj = currentData;
         var sections = parentElement.id.split(/-|~/g);
         // sections.unshift("obj");
@@ -338,7 +383,7 @@ export default function CMS({
         window.parent.postMessage({
             actionType: 'finishedEdit',
             sections: sections,
-            val: val,
+            val: newText,//val,
         }, '*');
 
         addEditButton();
@@ -410,6 +455,7 @@ export default function CMS({
 
     const createEditInput = (e) => {
         var el = e.target;
+        // Kills onclick() events, so has to be placed first.
         e.preventDefault();
         e.stopPropagation();
         var parentElement = el.closest('.cp-editable');
@@ -424,15 +470,36 @@ export default function CMS({
         // var m = parentElement.innerHTML.match(/.+?(?=<div class="editor")/s);
         // var currentText = m[0].trim();
         // var regexp = new RegExp(m[0]);
-        var matchIndex = parentElement.innerHTML.indexOf('<div class="editor-wrapper"');
-        var firstText = parentElement.innerHTML.substring(0, matchIndex);
+        // var matchIndex = parentElement.innerHTML.indexOf('<div class="editor-wrapper"');
+        var matchIndex = parentElement.innerHTML.indexOf('<div class="editables-wrapper"');
+        // var innerText;
+        
+        var original_HTML = parentElement.innerHTML.substring(0, matchIndex);
+        var singleQuillId = undefined;
+
+        if(parentElement.dataset.content){
+            original_HTML = parentElement.dataset.content;
+        }
+        console.log("original_HTML: ", original_HTML);
+        // Only uses one quill that is shared
+        if(parentElement.dataset.singleQuillId){
+            singleQuillId = parentElement.dataset.singleQuillId;
+        }
+
+        // original_innerHTMLs[parentElement.id] = original_HTML;
+        // console.log('innerText: ', original_HTML);
+        // console.log("firstText: ", firstText);
         // var secondText = parentElement.innerHTML.substring(matchIndex);
         // console.log('firstText: ', firstText);
 
         // var inp = document.createElement("input");
         if(!parentElement.querySelector('.ql-toolbar')){
-            // Kills onclick() events, so has to be placed first.
-            parentElement.innerHTML = parentElement.innerHTML.replace(firstText, '');
+            // if(innerText){
+            //     parentElement.innerHTML = parentElement.innerHTML.replace(innerText, '');    
+            // } else {
+                // parentElement.innerHTML = parentElement.innerHTML.replace(original_HTML, '');
+            // }
+            // original_innerHTMLs[parentElement.id] = original_HTML;
             var quill = new Quill(parentElement.querySelector('.editor-wrapper'), { //getCssSelector(parentElement)
                 modules: { toolbar: toolbarOptions },
                 theme: 'snow',
@@ -445,23 +512,48 @@ export default function CMS({
             // quill.setText(currentText);
             // quill.setHTML(currentText);
             // parentElement.innerHTML = parentElement.innerHTML.replace(regexp, '');
+            quill.setHTML(parentElement, original_HTML);
 
-            quill.setHTML(firstText);
             // parentElement.innerHTML = secondText;
 
-            quills[getCssSelector(parentElement)] = quill;
+            if(singleQuillId){
+                quills[singleQuillId] = quill;
+            } else {
+                quills[parentElement.id] = quill;
+            }
         } else {
-            // Editor already exists, just show it
-            parentElement.querySelector('.ql-toolbar').style.display = "block";
-            parentElement.querySelector('.ql-container').style.display = "block";
+            
             // var currentText = parentElement.textContent;
             // currentText = currentText.replace(/EditSaveCancel$/,'');
             // currentText = m[0].trim();
             // var replaceText = new RegExp(currentText + "EditSaveCancel");
             // parentElement.innerHTML = parentElement.innerHTML.replace(regexp, '');
-            parentElement.innerHTML = parentElement.innerHTML.replace(firstText, '');
+            // parentElement.innerHTML = parentElement.innerHTML.replace(original_HTML, '');
             // parentElement.innerHTML = secondText;
-            quills[getCssSelector(parentElement)].setHTML(firstText);
+            // quills[getCssSelector(parentElement)].setHTML(firstText);
+
+            // Editor doesn't exist for special types e.g. react-select, where multiple fields use the same parent.
+            // Parent has Quill but children don't.
+
+            // if (!quills[parentElement.id]) {
+            //     var quill = new Quill(parentElement.querySelector('.editor-wrapper'), { //getCssSelector(parentElement)
+            //         modules: { toolbar: toolbarOptions },
+            //         theme: 'snow',
+            //         formats: ['bold','header','italic','blockquote','indent','link','strike','script','underline','list','direction','align','image','video'],
+            //     });
+            //     quill.setHTML(original_HTML);
+            //     quills[parentElement.id] = quill;
+            // }
+            // Editor already exists, just show it.
+            parentElement.querySelector('.ql-toolbar').style.display = "block";
+            parentElement.querySelector('.ql-container').style.display = "block";
+            if(singleQuillId){
+                quills[singleQuillId].setHTML(parentElement, original_HTML);
+            } else {
+                console.log(parentElement.id);
+                quills[parentElement.id].setHTML(parentElement, original_HTML);
+            }
+            // console.log("quill: ", quills[parentElement.id]);
             // quills[getCssSelector(parentElement)].setText(currentText);
         }
 
@@ -498,7 +590,12 @@ export default function CMS({
                     position: relative;;
                 }
                 .cp-editable.editing {
-                    pointer-events: all!important
+                    pointer-events: all!important;
+                    visibility: hidden;
+                }
+                .cp-editable.editing > div {
+                    pointer-events: all!important;
+                    visibility: visible;
                 }
                 .cp-editable::after {
                     content: "";
@@ -513,13 +610,20 @@ export default function CMS({
                 .cp-editable.editing::after {
                     opacity: 0;
                 }
+                .cp-editable:hover .cp-editable-btn-wrapper {
+                    opacity: 1;
+                }
                 .cp-editable-btn-wrapper {
+                    opacity: 0;
                     position: absolute;
                     /* box-shadow: 0px 0px 2px rgba(255,255,255,0.5); */
                     z-index: 1;
+                    /* right: 0; */
                     right: 0;
                     pointer-events: all;
-                    top: 5px;
+                    /* top: 5px; */
+                    /* top: -15px; */
+                    bottom: 0px;
                     display: flex;
                     justify-content: space-evenly;
                     align-items: center;
@@ -530,15 +634,16 @@ export default function CMS({
                 .cp-editable-cancel-btn {
                     background-color: black;
                     color: white;
-                    padding: 2px 4px;
-                    width: 50px;
-                    font-size: 12px;
+                    padding: 2px 6px;
+                    /* width: 50px; */
+                    font-size: 12px!important;
+                    font-weight: 200!important;
                     border-radius: 4px;
                     border: 1px solid rgba(150,150,150,0.5);
                     cursor: pointer;
                     line-height: normal;
-                    font-weight: 200;
                     margin-left: 5px;
+                    text-align: center;
                 }
                 .cp-editable-btn:hover,
                 .cp-editable-save-btn:hover,
@@ -618,7 +723,7 @@ export default function CMS({
                 .cp-editable-array-minus {
                     position: absolute;
                     bottom: 5px;
-                    right: 5px;
+                    left: 5px;
                     /*top: 50%;*/
                     /*transform: translateY(-50%);*/
                     border: 1px solid rgba(150,150,150,0.5);
@@ -633,7 +738,7 @@ export default function CMS({
                 }
                 .cp-editable-array-plus-wrapper {
                     position: absolute;
-                    right: 10px;
+                    left: 35px;
                     bottom: 0px;
                 }
                 .cp-editable-array-plus {
@@ -654,6 +759,19 @@ export default function CMS({
                 .cp-editable-array-plus:hover ,
                 .cp-editable-array-minus:hover {
                     opacity: .75;
+                }
+
+                /* Set defaults */
+                svg {
+                    color: initial!important;
+                    transition: initial!important;
+                    cursor: initial!important;
+                    margin-right: initial!important;
+                    margin-top: initial!important;
+                    height: initial!important;
+                    display: initial!important;
+                    padding: initial!important;
+                    padding-right: initial!important;
                 }
             </style>
         `)

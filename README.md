@@ -1,6 +1,6 @@
 # firestore-cms-iframe
 
-> A Content Management System for  an authenticated Firestore user who modifies their website from an external iframe 
+> A Content Management System for an authenticated Firestore user who modifies their website from an external iframe 
 
 [![NPM](https://img.shields.io/npm/v/firestore-cms-iframe.svg)](https://www.npmjs.com/package/firestore-cms-iframe) [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 
@@ -26,7 +26,7 @@ import CMS from 'firestore-cms-iframe'
 class Example extends Component {
   render() {
     return <MyWebsite>
-      <CMS allowedOrigin="<my-example-domain.com>" templates={{}} />
+      <CMS allowedOrigins={["<my-example-domain.com>"]} templates={{}} />
     </ MyWebsite>
   }
 }
