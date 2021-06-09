@@ -12,6 +12,14 @@ This is to be used to listen to a parent iframe, then trigger editable component
 npm install --save firestore-cms-iframe
 ```
 
+## Publish
+
+Github Pages
+$ npm run deploy
+
+npm
+$ npm publish
+
 ## Live Demo
 https://gieoon.github.io/firestore-cms-iframe/
 
@@ -35,3 +43,9 @@ class Example extends Component {
 ## License
 
 MIT © [gieoon](https://github.com/gieoon)
+
+
+## Resources
+
+Build with [create-react-library](https://www.npmjs.com/package/create-react-library)
+

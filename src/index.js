@@ -1,15 +1,13 @@
 // This has been moved to npm package firestore-cms-iframe.
 
 import React, {useEffect, useState, ReactDOM} from 'react';
-import {useLocation} from 'react-router-dom';
 // This is shared code for all CMS listeners.
 // Listens to events from login.<domain-name>.craftie.xyz, 
 // Edits the page after events are received.
 import Quill from 'quill';
 // import ReactQuill from 'react-quill';
 // import 'react-quill/dist/quill.snow.css';
-import getCssSelector from 'css-selector-generator';
-import { cms_templates } from './constants';
+// import getCssSelector from 'css-selector-generator';
 // import htmlToText from 'html-to-text';
 
 Quill.prototype.getHTML = (parentElement) => {
@@ -27,7 +25,6 @@ export default function CMS({
     allowedOrigins,
     templates,
 }){
-    let location = useLocation();
 
     const [editing, setEditing] = useState(/*TODO make this false */true);
     // const [showEditor, setShowingEditor] = useState();
@@ -690,6 +687,12 @@ export default function CMS({
                     margin: 1em 0!important;
                 }
 
+                .editables-wrapper {
+                    /* position: absolute;
+                    top: 15px;
+                    right: 0; */
+                }
+
                 .cp-editable-img-btn {
                     position: relative;
                     border: 2px solid black;
@@ -764,7 +767,6 @@ export default function CMS({
                 /* Set defaults */
                 svg {
                     color: initial!important;
-                    transition: initial!important;
                     cursor: initial!important;
                     margin-right: initial!important;
                     margin-top: initial!important;
