@@ -389,6 +389,7 @@ export default function CMS({
         var sections = parentElement.id.split(/-|~/g);
         // sections.unshift("obj");
         var val = extractElementContent(parentElement);
+
         window.parent.postMessage({
             actionType: 'finishedEdit',
             sections: sections,
@@ -446,18 +447,18 @@ export default function CMS({
     const toolbarOptions = [
         [{ 'header': [2, false] }],
         // [{ 'size': ['small', false, 'large', 'huge'] }],  // custom dropdown
-        ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
-        ['blockquote', /*'code-block'*/'link'],
+        ['bold', 'italic'/*, 'underline', 'strike'*/],        // toggled buttons
+        [/*'blockquote', 'code-block'*/'link'],
       
         // [{ 'header': 1 }, { 'header': 2 }],               // custom button values
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [/*{ 'list': 'ordered'}, */{ 'list': 'bullet' }],
         // [{ 'script': 'sub'}, { 'script': 'super' }],      // superscript/subscript
         // [{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
         // [{ 'direction': 'rtl' }],                         // text direction
       
         // [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
         // [{ 'font': [] }],
-        [{ 'align': [] }],
+        // [{ 'align': [] }],
       
         // ['clean']                                         // remove formatting button
     ];
@@ -619,11 +620,11 @@ export default function CMS({
                 .cp-editable.editing::after {
                     opacity: 0;
                 }
-                .cp-editable:hover .cp-editable-btn-wrapper {
+                .cp-editable:hover .cp-editable-btn {
                     opacity: 1;
                 }
                 .cp-editable-btn-wrapper {
-                    opacity: 0;
+                    opacity: 1;
                     position: absolute;
                     /* box-shadow: 0px 0px 2px rgba(255,255,255,0.5); */
                     z-index: 1;
@@ -637,6 +638,9 @@ export default function CMS({
                     justify-content: space-evenly;
                     align-items: center;
                     transition: all 100ms ease-in-out;
+                }
+                .cp-editable-btn {
+                    opacity: 0;
                 }
                 .cp-editable-btn,
                 .cp-editable-save-btn,
@@ -783,6 +787,7 @@ export default function CMS({
 
                 /* Set defaults */
                 svg {
+                    transform: initial!important;
                     color: initial!important;
                     cursor: initial!important;
                     margin-right: initial!important;
