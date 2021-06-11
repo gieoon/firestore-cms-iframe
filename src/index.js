@@ -11,7 +11,20 @@ import Quill from 'quill';
 // import htmlToText from 'html-to-text';
 
 Quill.prototype.getHTML = (parentElement) => {
+    // const fragment = document.createDocumentFragment();
+    // const parser = new DOMParser();
+    // const newNode = parser.parseFromString(
+    //     parentElement.querySelector('.ql-editor').innerHTML, 
+    //     'text/html'
+    // );
+    // const els = newNode.documentElement.querySelectorAll('div');
+    // for (let index = 0; index < els.length; index++) {
+    //     fragment.appendChild(els[index]);  
+    // }
+    // // parent.appendChild(fragment);
+    // console.log(fragment);
     return parentElement.querySelector('.ql-editor').innerHTML;
+    // return parentElement.querySelector('.ql-editor').innerText;
 };
 
 Quill.prototype.setHTML = (parentElement, html) => {
@@ -376,7 +389,6 @@ export default function CMS({
         var sections = parentElement.id.split(/-|~/g);
         // sections.unshift("obj");
         var val = extractElementContent(parentElement);
-
         window.parent.postMessage({
             actionType: 'finishedEdit',
             sections: sections,
@@ -689,8 +701,13 @@ export default function CMS({
 
                 .editables-wrapper {
                     /* position: absolute;
-                    top: 15px;
-                    right: 0; */
+                    top: 15px; */
+                    /*right: 0;
+                    position: absolute;
+                    bottom: 0;*/
+                    z-index: 999;
+                    position: relative;
+                    transform: translateY(-50%);
                 }
 
                 .cp-editable-img-btn {
